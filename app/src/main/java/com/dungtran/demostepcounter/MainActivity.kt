@@ -12,15 +12,16 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import com.dungtran.demostepcounter.databinding.ActivityMainBinding
+import java.lang.Math.sqrt
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var binding: ActivityMainBinding
 
     private var sensorManager: SensorManager? = null
-    lateinit var sensor: Sensor
+    private lateinit var sensor: Sensor
     private var running = false
-    private var totalStep = 0f
-    private var previousTotalSteps = 0f
+    private var magnitudePrevious = 0.0
+    private var stepCount = 0
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -28,7 +29,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         loadData()
         resetStep()
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        sensor = sensorManager!!.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+        sensor = sensorManager!!.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     }
 
     override fun onResume() {
@@ -44,16 +45,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        Log.d("main", "onSensorChanged: $totalStep")
-        if (running) {
-//            totalStep = event!!.values[0]
-//            val currentStep = totalStep.toInt() - previousTotalSteps.toInt()
-            binding.tvStepCounter.text = ("" + event!!.values[0])//("$currentStep")
+        if (running && event != null) {
+            val x = event.values[0]
+            val y = event.values[1]
+            val z = event.values[2]
+
+            val magnitude = kotlin.math.sqrt(x * x + y * y + z * z)
+            val magnitudeDelta = magnitude - magnitudePrevious
+            magnitudePrevious = magnitude.toDouble()
+
+            if (magnitudeDelta > 7) stepCount++
+            binding.tvStepCounter.text = (""+stepCount)
         }
-        Toast.makeText(this, "Sensor change", Toast.LENGTH_SHORT).show()
     }
 
     override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
+        sensorManager?.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     private fun resetStep() {
@@ -62,9 +69,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             Log.d("main", "resetStep: tap")
         }
         binding.btnReset.setOnLongClickListener {
-            previousTotalSteps = totalStep
-            Log.d("main", "resetStep: $totalStep")
-            binding.tvStepCounter.text = "120"
+            stepCount = 0
+            binding.tvStepCounter.text = "0"
             saveData()
             true
         }
@@ -73,14 +79,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private  fun saveData() {
         val sharedPreferences = getSharedPreferences("myPre", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
-        editor.putFloat("primaryKey", previousTotalSteps)
+        editor.putInt("primaryKey", stepCount)
         editor.apply()
     }
 
     private fun loadData() {
         val sharedPreferences = getSharedPreferences("myPre", Context.MODE_PRIVATE)
-        val savedNumber = sharedPreferences.getFloat("primaryKey", 0f)
-        previousTotalSteps = savedNumber
+        val savedNumber = sharedPreferences.getInt("primaryKey", 0)
+        stepCount = savedNumber
     }
 
 }
