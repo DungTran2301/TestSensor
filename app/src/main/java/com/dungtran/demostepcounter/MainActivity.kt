@@ -17,6 +17,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var binding: ActivityMainBinding
 
     private var sensorManager: SensorManager? = null
+    lateinit var sensor: Sensor
     private var running = false
     private var totalStep = 0f
     private var previousTotalSteps = 0f
@@ -27,18 +28,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         loadData()
         resetStep()
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-
+        sensor = sensorManager!!.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
     }
 
     override fun onResume() {
         super.onResume()
         running = true
-        val stepSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
-        if (stepSensor != null) {
-            sensorManager!!.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_NORMAL)
-        } else {
-            Toast.makeText(this, "No sensor detected on this device", Toast.LENGTH_SHORT).show()
-        }
+        sensorManager!!.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
     }
 
     override fun onPause() {
@@ -85,8 +81,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val sharedPreferences = getSharedPreferences("myPre", Context.MODE_PRIVATE)
         val savedNumber = sharedPreferences.getFloat("primaryKey", 0f)
         previousTotalSteps = savedNumber
-
-        Log.d("Main", "loadData: 000000000000")
     }
 
 }
